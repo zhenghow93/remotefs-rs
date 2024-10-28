@@ -219,15 +219,16 @@ pub trait RemoteFs {
     /// ### Default implementation
     ///
     /// By default this function uses the streams function to copy content from reader to writer
-    fn open_file(&mut self, src: &Path, mut dest: Box<dyn Write + Send>) -> RemoteResult<u64> {
+    fn open_file(&mut self, src: &Path) -> RemoteResult<(u64, Vec<u8>)> {
         if self.is_connected() {
+            let mut dest = vec![];
             let mut stream = self.open(src)?;
             trace!("File opened");
             let sz = io::copy(&mut stream, &mut dest)
                 .map_err(|e| RemoteError::new_ex(RemoteErrorType::ProtocolError, e.to_string()))?;
             self.on_read(stream)?;
             trace!("Copied {} bytes to destination", sz);
-            Ok(sz)
+            Ok((sz, dest))
         } else {
             Err(RemoteError::new(RemoteErrorType::NotConnected))
         }
